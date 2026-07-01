@@ -23,6 +23,7 @@
       --field: 0;
       --rt-press: 0.1;
       --rt-release: 0;
+      --runner-shift: 0%;
       color-scheme: light;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -190,7 +191,7 @@
       box-shadow: 0 18px 44px rgba(19, 35, 44, 0.09);
       padding: clamp(18px, 3vw, 28px);
       display: grid;
-      grid-template-rows: auto auto 1fr auto;
+      grid-template-rows: auto auto auto auto auto;
       gap: 16px;
       min-height: 760px;
     }
@@ -234,6 +235,135 @@
     .readout > span {
       color: var(--muted);
       font-size: 12px;
+    }
+
+    .game-panel {
+      position: relative;
+      min-height: 190px;
+      border: 1px solid #cfe0e7;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #dff9ff;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+      isolation: isolate;
+    }
+
+    .game-bg {
+      position: absolute;
+      inset: 0;
+      width: 200%;
+      background-image: url("assets/side-scroll-bg.png");
+      background-size: auto 100%;
+      background-repeat: repeat-x;
+      image-rendering: pixelated;
+      transform: translateX(0);
+      animation: game-scroll calc(3.8s - var(--press) * 1.7s) linear infinite;
+      animation-play-state: paused;
+      z-index: 0;
+    }
+
+    .is-pressing .game-bg {
+      animation-play-state: running;
+    }
+
+    .runner {
+      position: absolute;
+      left: calc(12% + var(--runner-shift));
+      bottom: 17px;
+      height: min(150px, 78%);
+      max-width: 34%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      transform-origin: 50% 100%;
+      filter: drop-shadow(0 8px 10px rgba(19, 35, 44, 0.2));
+      z-index: 2;
+      transition: left 120ms linear;
+    }
+
+    .is-pressing .runner {
+      animation: runner-step 420ms steps(2, end) infinite;
+    }
+
+    .runner-shadow {
+      position: absolute;
+      left: calc(12% + var(--runner-shift));
+      bottom: 14px;
+      width: 76px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(19, 35, 44, 0.16);
+      filter: blur(4px);
+      transform: translateX(18px);
+      z-index: 1;
+      transition: left 120ms linear, transform 120ms ease;
+    }
+
+    .is-pressing .runner-shadow {
+      animation: shadow-step 420ms steps(2, end) infinite;
+    }
+
+    .game-status {
+      position: absolute;
+      right: 14px;
+      top: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.7);
+      color: #48616c;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 8px 18px rgba(19, 35, 44, 0.08);
+      z-index: 3;
+    }
+
+    .game-status::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 0 3px rgba(242, 107, 100, 0.12);
+    }
+
+    .is-pressing .game-status {
+      color: #13542f;
+    }
+
+    .is-pressing .game-status::before {
+      background: var(--green);
+      box-shadow: 0 0 0 3px rgba(36, 201, 107, 0.14), 0 0 12px rgba(36, 201, 107, 0.42);
+    }
+
+    @keyframes game-scroll {
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    @keyframes runner-step {
+      0%,
+      100% {
+        transform: translateY(0) rotate(-0.8deg);
+      }
+
+      50% {
+        transform: translateY(-5px) rotate(1deg);
+      }
+    }
+
+    @keyframes shadow-step {
+      0%,
+      100% {
+        transform: translateX(18px) scaleX(1);
+      }
+
+      50% {
+        transform: translateX(18px) scaleX(0.86);
+      }
     }
 
     .switch-zone {
@@ -468,16 +598,11 @@
     }
 
     .stage-controls {
-      display: grid;
-      grid-template-columns: 1fr auto;
+      display: flex;
       gap: 12px;
       align-items: center;
+      justify-content: flex-end;
       padding-top: 4px;
-    }
-
-    .depth-slider {
-      width: 100%;
-      accent-color: var(--cyan-deep);
     }
 
     .button-row {
@@ -796,6 +921,10 @@
       .lab-stage {
         min-height: auto;
       }
+
+      .game-panel {
+        min-height: 170px;
+      }
     }
 
     @media (max-width: 640px) {
@@ -817,6 +946,20 @@
 
       .readout {
         justify-items: start;
+      }
+
+      .game-panel {
+        min-height: 152px;
+      }
+
+      .runner {
+        height: 122px;
+        max-width: 42%;
+        left: calc(8% + var(--runner-shift));
+      }
+
+      .runner-shadow {
+        left: calc(8% + var(--runner-shift));
       }
 
       .switch-zone {
@@ -914,7 +1057,7 @@
       }
 
       .stage-controls {
-        grid-template-columns: 1fr;
+        justify-content: start;
       }
 
       .button-row {
@@ -969,6 +1112,41 @@
           </div>
         </div>
 
+        <div class="game-panel" aria-label="mini walking game">
+          <div class="game-bg" aria-hidden="true"></div>
+          <div class="runner-shadow" aria-hidden="true"></div>
+          <img class="runner" src="assets/character-walker.png" alt="" draggable="false">
+          <div id="gameStatus" class="game-status" aria-live="polite">WAIT</div>
+        </div>
+
+        <div class="switch-zone">
+          <div id="switchWrap" class="switch-wrap" role="slider" tabindex="0" aria-label="스위치 입력 깊이" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0">
+            <div class="switch-core">
+              <div class="photo-switch" aria-hidden="true">
+                <div class="photo-shadow"></div>
+                <img class="photo-layer photo-housing" src="assets/switch-photo-housing.png" alt="" draggable="false">
+                <img class="photo-layer photo-stem" src="assets/switch-photo-stem.png" alt="" draggable="false">
+              </div>
+            </div>
+          </div>
+
+          <div class="scale" aria-hidden="true">
+            <div class="scale-track">
+              <div class="scale-fill"></div>
+            </div>
+            <div class="scale-marker"></div>
+            <div class="actuation-line"></div>
+            <div class="rt-scale-line press"></div>
+            <div class="rt-scale-line release"></div>
+            <div class="rt-scale-chip press" id="rtPressChip">ON +0.4mm</div>
+            <div class="rt-scale-chip release" id="rtReleaseChip">OFF -0.3mm</div>
+            <div class="scale-labels">
+              <span>0.0mm</span>
+              <span>4.0mm</span>
+            </div>
+          </div>
+        </div>
+
         <div class="stage-settings">
           <section id="magneticSettingsPane" class="settings-pane" role="tabpanel" aria-labelledby="magneticTab">
             <div class="pane-copy">
@@ -1013,36 +1191,7 @@
           </section>
         </div>
 
-        <div class="switch-zone">
-          <div id="switchWrap" class="switch-wrap" role="slider" tabindex="0" aria-label="스위치 입력 깊이" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0">
-            <div class="switch-core">
-              <div class="photo-switch" aria-hidden="true">
-                <div class="photo-shadow"></div>
-                <img class="photo-layer photo-housing" src="assets/switch-photo-housing.png" alt="" draggable="false">
-                <img class="photo-layer photo-stem" src="assets/switch-photo-stem.png" alt="" draggable="false">
-              </div>
-            </div>
-          </div>
-
-          <div class="scale" aria-hidden="true">
-            <div class="scale-track">
-              <div class="scale-fill"></div>
-            </div>
-            <div class="scale-marker"></div>
-            <div class="actuation-line"></div>
-            <div class="rt-scale-line press"></div>
-            <div class="rt-scale-line release"></div>
-            <div class="rt-scale-chip press" id="rtPressChip">ON +0.4mm</div>
-            <div class="rt-scale-chip release" id="rtReleaseChip">OFF -0.3mm</div>
-            <div class="scale-labels">
-              <span>0.0mm</span>
-              <span>4.0mm</span>
-            </div>
-          </div>
-        </div>
-
         <div class="stage-controls">
-          <input id="depthSlider" class="depth-slider" type="range" min="0" max="4" step="0.1" value="0" aria-label="현재 입력 깊이">
           <div class="button-row">
             <button id="demoButton" class="btn primary" type="button">자동 데모</button>
             <button id="resetButton" class="btn" type="button">리셋</button>
@@ -1070,7 +1219,7 @@
       rapidSettingsPane: document.getElementById("rapidSettingsPane"),
       switchWrap: document.getElementById("switchWrap"),
       depthValue: document.getElementById("depthValue"),
-      depthSlider: document.getElementById("depthSlider"),
+      gameStatus: document.getElementById("gameStatus"),
       actuationRange: document.getElementById("actuationRange"),
       actuationNumber: document.getElementById("actuationNumber"),
       rtPressRange: document.getElementById("rtPressRange"),
@@ -1185,9 +1334,11 @@
       refs.root.style.setProperty("--actuation", actuationRatio.toFixed(3));
       refs.root.style.setProperty("--rt-press", rtPressRatio.toFixed(3));
       refs.root.style.setProperty("--rt-release", rtReleaseRatio.toFixed(3));
+      refs.root.style.setProperty("--runner-shift", `${(press * 18).toFixed(1)}%`);
       document.body.classList.toggle("mode-rapid", state.activeTab === "rapid");
       document.body.classList.toggle("mode-magnetic", state.activeTab === "magnetic");
       document.body.classList.toggle("input-on", effectiveOn);
+      document.body.classList.toggle("is-pressing", state.depth > 0.05);
 
       refs.magneticTab.setAttribute("aria-selected", state.activeTab === "magnetic" ? "true" : "false");
       refs.rapidTab.setAttribute("aria-selected", state.activeTab === "rapid" ? "true" : "false");
@@ -1201,7 +1352,7 @@
       refs.modeSub.textContent = state.rtEnabled ? "방향 변화량으로 즉시 ON/OFF" : "설정한 입력 지점을 넘으면 ON";
 
       refs.depthValue.textContent = formatMm(state.depth);
-      refs.depthSlider.value = formatMm(state.depth);
+      refs.gameStatus.textContent = state.depth > 0.05 ? "WALK" : "WAIT";
       refs.switchWrap.setAttribute("aria-valuenow", formatMm(state.depth));
       refs.switchWrap.setAttribute("aria-valuetext", `${formatMm(state.depth)}mm`);
 
@@ -1280,11 +1431,6 @@
         stopDemo();
         setDepth(4);
       }
-    });
-
-    refs.depthSlider.addEventListener("input", () => {
-      stopDemo();
-      setDepth(Number(refs.depthSlider.value));
     });
 
     refs.magneticTab.addEventListener("click", () => selectTab("magnetic"));
