@@ -1,0 +1,1326 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Magnetic Switch Lab</title>
+  <style>
+    :root {
+      --bg: #eef5f7;
+      --ink: #13232c;
+      --muted: #647581;
+      --line: #c9d8df;
+      --panel: #ffffff;
+      --panel-2: #f7fbfc;
+      --cyan: #67dce2;
+      --cyan-deep: #18aeba;
+      --lime: #b7e80d;
+      --green: #24c96b;
+      --amber: #f2b84b;
+      --red: #f26b64;
+      --navy: #0d3d73;
+      --press: 0;
+      --field: 0;
+      --rt-press: 0.1;
+      --rt-release: 0;
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(13, 61, 115, 0.08), transparent 360px),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+      align-items: center;
+      gap: 16px;
+      padding: 16px clamp(16px, 4vw, 42px);
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(201, 216, 223, 0.9);
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(19px, 2vw, 28px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status-pill {
+      display: inline-grid;
+      grid-template-columns: 18px auto;
+      align-items: center;
+      gap: 10px;
+      min-width: 142px;
+      padding: 10px 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 10px 28px rgba(19, 35, 44, 0.08);
+    }
+
+    .status-lamp {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 0 4px rgba(242, 107, 100, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+      transition: background 140ms ease, box-shadow 140ms ease;
+    }
+
+    .is-on .status-lamp {
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(36, 201, 107, 0.16), 0 0 22px rgba(36, 201, 107, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+    }
+
+    .status-copy {
+      display: grid;
+      gap: 1px;
+    }
+
+    .status-copy strong {
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .status-copy span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .mode-note {
+      justify-self: end;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .layout {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      padding: 14px clamp(16px, 3vw, 34px) clamp(16px, 3vw, 34px);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .tabs-shell {
+      width: min(1280px, 100%);
+      margin: 0 auto;
+      padding: clamp(16px, 3vw, 26px) clamp(16px, 3vw, 34px) 0;
+    }
+
+    .tab-nav {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      width: min(560px, 100%);
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 12px 34px rgba(19, 35, 44, 0.08);
+    }
+
+    .tab-button {
+      min-width: 0;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      padding: 11px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .tab-button[aria-selected="true"] {
+      background: var(--navy);
+      color: #fff;
+      box-shadow: 0 7px 18px rgba(13, 61, 115, 0.24);
+    }
+
+    .lab-stage {
+      min-width: 0;
+    }
+
+    .lab-stage {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fcfd 100%);
+      box-shadow: 0 18px 44px rgba(19, 35, 44, 0.09);
+      padding: clamp(18px, 3vw, 28px);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 16px;
+      min-height: 760px;
+    }
+
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .stage-head h2,
+    .panel h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .stage-head p,
+    .panel-sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .readout {
+      display: grid;
+      justify-items: end;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .readout strong {
+      font-variant-numeric: tabular-nums;
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .readout > span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .switch-zone {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(430px, 540px) 92px;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      min-height: 500px;
+      padding: 10px 0 4px;
+    }
+
+    .switch-wrap {
+      position: relative;
+      height: 500px;
+      display: grid;
+      place-items: center;
+      touch-action: none;
+      cursor: grab;
+      user-select: none;
+      outline: none;
+    }
+
+    .switch-wrap:active {
+      cursor: grabbing;
+    }
+
+    .switch-wrap:focus-visible {
+      box-shadow: 0 0 0 3px rgba(24, 174, 186, 0.26);
+      border-radius: 8px;
+    }
+
+    .switch-core {
+      --stem-travel: 70px;
+      position: relative;
+      width: min(100%, 500px);
+      aspect-ratio: 1;
+      isolation: isolate;
+    }
+
+    .photo-switch {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+    }
+
+    .photo-shadow {
+      position: absolute;
+      left: 24%;
+      right: 24%;
+      bottom: 9%;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(19, 35, 44, 0.16), rgba(19, 35, 44, 0));
+      filter: blur(9px);
+      z-index: 0;
+    }
+
+    .photo-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    .photo-housing {
+      z-index: 1;
+      filter: drop-shadow(0 20px 24px rgba(19, 35, 44, 0.1));
+    }
+
+    .photo-stem {
+      z-index: 2;
+      transform: translateY(calc(var(--press) * var(--stem-travel)));
+      transition: transform 80ms linear, filter 140ms ease;
+      filter: drop-shadow(0 9px 12px rgba(133, 83, 20, 0.18));
+    }
+
+    .input-on .photo-stem {
+      filter: drop-shadow(0 12px 18px rgba(36, 201, 107, 0.22));
+    }
+
+    .scale {
+      position: relative;
+      height: 376px;
+      align-self: center;
+      padding-left: 26px;
+    }
+
+    .scale-track {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 8px;
+      height: 100%;
+      border-radius: 999px;
+      background: #dce8ec;
+      overflow: hidden;
+    }
+
+    .scale-track::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(180deg, transparent 0 18px, rgba(71, 93, 102, 0.24) 18px 20px);
+    }
+
+    .scale-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: calc(var(--press) * 100%);
+      background: linear-gradient(180deg, var(--cyan), var(--cyan-deep));
+      transition: height 80ms linear, background 140ms ease, box-shadow 140ms ease;
+    }
+
+    .input-on .scale-fill {
+      background: linear-gradient(180deg, #62ef97, var(--green));
+      box-shadow: 0 0 18px rgba(36, 201, 107, 0.48);
+    }
+
+    .input-on .scale-track {
+      box-shadow: 0 0 0 4px rgba(36, 201, 107, 0.12), 0 0 22px rgba(36, 201, 107, 0.22);
+    }
+
+    .scale-marker {
+      position: absolute;
+      left: -6px;
+      top: calc(var(--press) * 100%);
+      width: 20px;
+      height: 3px;
+      background: var(--ink);
+      transform: translateY(-1px);
+      border-radius: 3px;
+      transition: background 140ms ease, box-shadow 140ms ease;
+    }
+
+    .input-on .scale-marker {
+      background: #0e8e4b;
+      box-shadow: 0 0 0 4px rgba(36, 201, 107, 0.18);
+    }
+
+    .actuation-line {
+      position: absolute;
+      left: -5px;
+      top: calc(var(--actuation, 0.3) * 100%);
+      width: 64px;
+      height: 2px;
+      background: var(--amber);
+      box-shadow: 0 0 0 4px rgba(242, 184, 75, 0.16);
+      border-radius: 2px;
+    }
+
+    .mode-rapid .actuation-line {
+      display: none;
+    }
+
+    .rt-scale-line,
+    .rt-scale-chip {
+      display: none;
+      position: absolute;
+      z-index: 2;
+    }
+
+    .mode-rapid .rt-scale-line,
+    .mode-rapid .rt-scale-chip {
+      display: block;
+    }
+
+    .rt-scale-line {
+      left: -5px;
+      width: 76px;
+      height: 2px;
+      border-radius: 2px;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.72);
+    }
+
+    .rt-scale-line.press {
+      top: calc(var(--rt-press) * 100%);
+      background: var(--green);
+    }
+
+    .rt-scale-line.release {
+      top: calc(var(--rt-release) * 100%);
+      background: var(--red);
+    }
+
+    .rt-scale-chip {
+      left: 22px;
+      min-width: 74px;
+      padding: 5px 7px;
+      border-radius: 7px;
+      background: #fff;
+      border: 1px solid #dbe7ec;
+      color: var(--muted);
+      box-shadow: 0 8px 18px rgba(19, 35, 44, 0.08);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rt-scale-chip.press {
+      top: calc(var(--rt-press) * 100% - 16px);
+      color: #13542f;
+    }
+
+    .rt-scale-chip.release {
+      top: calc(var(--rt-release) * 100% - 16px);
+      color: #74312d;
+    }
+
+    .scale-labels {
+      display: grid;
+      height: 100%;
+      align-content: space-between;
+      font-weight: 800;
+      font-size: 22px;
+    }
+
+    .scale-labels span {
+      display: block;
+      white-space: nowrap;
+    }
+
+    .stage-controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .depth-slider {
+      width: 100%;
+      accent-color: var(--cyan-deep);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 12px;
+      min-height: 38px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: #fff;
+    }
+
+    .btn:hover {
+      filter: brightness(0.98);
+    }
+
+    .stage-settings {
+      border: 1px solid #dbe7ec;
+      border-radius: 8px;
+      background: #f8fcfd;
+      padding: 12px;
+    }
+
+    .settings-pane {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.25fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .settings-pane[hidden] {
+      display: none;
+    }
+
+    .pane-copy {
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      padding: 8px 4px;
+    }
+
+    .pane-copy strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .pane-copy span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
+    .control-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 18px 44px rgba(19, 35, 44, 0.08);
+      padding: 18px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .mini-led {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .mini-led::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 0 3px rgba(242, 107, 100, 0.14);
+    }
+
+    .mini-led.on {
+      color: #13542f;
+      background: rgba(36, 201, 107, 0.08);
+      border-color: rgba(36, 201, 107, 0.38);
+    }
+
+    .mini-led.on::before {
+      background: var(--green);
+      box-shadow: 0 0 0 3px rgba(36, 201, 107, 0.16), 0 0 13px rgba(36, 201, 107, 0.4);
+    }
+
+    .meter-card {
+      border-radius: 8px;
+      border: 1px solid #dbe7ec;
+      background: var(--panel-2);
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .meter-row {
+      display: grid;
+      grid-template-columns: 78px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .meter-bar {
+      position: relative;
+      height: 12px;
+      border-radius: 999px;
+      background: #dbe8ec;
+      overflow: hidden;
+    }
+
+    .meter-bar span {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: calc(var(--press) * 100%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--lime));
+      transition: width 80ms linear;
+    }
+
+    .form-stack {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .field-control {
+      display: grid;
+      grid-template-columns: 1fr 84px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .field-control label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .field-control input[type="range"] {
+      width: 100%;
+      accent-color: var(--cyan-deep);
+    }
+
+    .number {
+      width: 84px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 8px;
+      color: var(--ink);
+      background: #fff;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .toggle-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 12px;
+      border-radius: 8px;
+      background: #f2f8fa;
+      border: 1px solid #dbe7ec;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .panel > .toggle-line + .toggle-line,
+    .panel > .toggle-line + .meter-card {
+      margin-top: 10px;
+    }
+
+    .switch-toggle {
+      position: relative;
+      display: inline-flex;
+      width: 52px;
+      height: 30px;
+      flex: 0 0 auto;
+    }
+
+    .switch-toggle input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toggle-ui {
+      width: 52px;
+      height: 30px;
+      border-radius: 999px;
+      background: #cbd8de;
+      border: 1px solid #b8c8d0;
+      transition: background 140ms ease;
+      cursor: pointer;
+    }
+
+    .toggle-ui::before {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 3px 8px rgba(19, 35, 44, 0.24);
+      transition: transform 140ms ease;
+    }
+
+    .switch-toggle input:checked + .toggle-ui {
+      background: var(--cyan-deep);
+      border-color: var(--cyan-deep);
+    }
+
+    .switch-toggle input:checked + .toggle-ui::before {
+      transform: translateX(22px);
+    }
+
+    .rt-depth {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .explain {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .explain div {
+      border-radius: 8px;
+      border: 1px solid #dbe7ec;
+      background: #f8fcfd;
+      padding: 10px;
+      min-height: 86px;
+    }
+
+    .explain strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+
+    .explain span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.38;
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+      }
+
+      .status-pill {
+        justify-self: start;
+      }
+
+      .mode-note {
+        justify-self: start;
+        text-align: left;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-pane {
+        grid-template-columns: 1fr;
+      }
+
+      .lab-stage {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .layout {
+        padding: 12px;
+      }
+
+      .tabs-shell {
+        padding: 12px 12px 0;
+      }
+
+      .tab-nav {
+        width: 100%;
+      }
+
+      .stage-head {
+        display: grid;
+      }
+
+      .readout {
+        justify-items: start;
+      }
+
+      .switch-zone {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+
+      .switch-wrap {
+        height: 420px;
+        width: min(100%, 360px);
+        transform: scale(0.86);
+        transform-origin: center;
+        margin: -28px 0;
+      }
+
+      .scale {
+        width: min(100%, 300px);
+        height: 180px;
+        padding-left: 0;
+        padding-top: 0;
+      }
+
+      .scale-track {
+        left: 0;
+        top: 94px;
+        width: 100%;
+        height: 8px;
+      }
+
+      .scale-track::before {
+        background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(71, 93, 102, 0.24) 18px 20px);
+      }
+
+      .scale-fill {
+        width: calc(var(--press) * 100%);
+        height: 100%;
+      }
+
+      .scale-marker {
+        left: calc(var(--press) * 100%);
+        top: 88px;
+        width: 3px;
+        height: 20px;
+      }
+
+      .actuation-line {
+        left: calc(var(--actuation, 0.3) * 100%);
+        top: 81px;
+        width: 2px;
+        height: 28px;
+      }
+
+      .rt-scale-line {
+        top: 79px;
+        width: 2px;
+        height: 36px;
+      }
+
+      .rt-scale-line.press {
+        left: calc(var(--rt-press) * 100%);
+      }
+
+      .rt-scale-line.release {
+        left: calc(var(--rt-release) * 100%);
+      }
+
+      .rt-scale-chip {
+        left: 0;
+        min-width: 62px;
+        padding: 4px 6px;
+        font-size: 10px;
+        transform: translateX(-50%);
+      }
+
+      .rt-scale-chip.press {
+        top: 12px;
+        left: calc(var(--rt-press) * 100%);
+      }
+
+      .rt-scale-chip.release {
+        top: 134px;
+        left: calc(var(--rt-release) * 100%);
+      }
+
+      .scale-labels {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 58px;
+        grid-template-columns: auto auto;
+        align-content: start;
+        justify-content: space-between;
+        height: auto;
+        font-size: 18px;
+      }
+
+      .stage-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row {
+        justify-content: start;
+      }
+
+      .explain {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Hall Effect Magnetic Switch Lab</h1>
+        <p>자석축 스위치의 깊이, 입력 지점, 래피드 트리거를 한 화면에서 조절합니다.</p>
+      </div>
+
+      <div id="mainStatus" class="status-pill" aria-live="polite">
+        <span class="status-lamp" aria-hidden="true"></span>
+        <span class="status-copy">
+          <strong id="mainStatusText">OFF</strong>
+          <span id="mainStatusMode">작동 지점 기준</span>
+        </span>
+      </div>
+
+      <div class="mode-note">
+        <strong id="modeLabel">Normal Actuation</strong><br>
+        <span id="modeSub">설정한 입력 지점을 넘으면 ON</span>
+      </div>
+    </header>
+
+    <div class="tabs-shell">
+      <nav class="tab-nav" aria-label="스위치 설정 탭">
+        <button id="magneticTab" class="tab-button" type="button" role="tab" aria-controls="magneticSettingsPane" aria-selected="true">마그네틱 스위치 세팅</button>
+        <button id="rapidTab" class="tab-button" type="button" role="tab" aria-controls="rapidSettingsPane" aria-selected="false">래피드 트리거 세팅</button>
+      </nav>
+    </div>
+
+    <section class="layout" aria-label="magnetic switch simulator">
+      <article class="lab-stage">
+        <div class="stage-head">
+          <div>
+            <h2>스위치 단면</h2>
+            <p>오렌지색 스템을 누르는 느낌으로 드래그하세요. 깊이는 0.0mm부터 4.0mm까지 움직입니다.</p>
+          </div>
+          <div class="readout">
+            <strong><span id="depthValue">0.0</span>mm</strong>
+            <span>현재 입력 깊이</span>
+          </div>
+        </div>
+
+        <div class="stage-settings">
+          <section id="magneticSettingsPane" class="settings-pane" role="tabpanel" aria-labelledby="magneticTab">
+            <div class="pane-copy">
+              <strong>입력 지점 조절</strong>
+              <span>설정한 깊이까지 스위치가 내려가면 ON으로 바뀝니다. 옆 게이지의 노란 선이 입력 지점입니다.</span>
+            </div>
+
+            <div class="control-grid">
+              <div class="field-control">
+                <label>
+                  입력 지점
+                  <input id="actuationRange" type="range" min="0.1" max="4" step="0.1" value="1.2">
+                </label>
+                <input id="actuationNumber" class="number" type="number" min="0.1" max="4" step="0.1" value="1.2" aria-label="입력 지점 mm">
+              </div>
+            </div>
+          </section>
+
+          <section id="rapidSettingsPane" class="settings-pane" role="tabpanel" aria-labelledby="rapidTab" hidden>
+            <div class="pane-copy">
+              <strong>래피드 트리거 감도</strong>
+              <span>ON/OFF 위치는 스위치 옆 깊이 게이지에 바로 표시됩니다. 현재 기준: <b id="rtDepth">0.0mm</b></span>
+            </div>
+
+            <div class="control-grid">
+              <div class="field-control">
+                <label>
+                  누를 때 감도
+                  <input id="rtPressRange" type="range" min="0.1" max="1.5" step="0.1" value="0.4">
+                </label>
+                <input id="rtPressNumber" class="number" type="number" min="0.1" max="1.5" step="0.1" value="0.4" aria-label="래피드 트리거 누를 때 감도">
+              </div>
+
+              <div class="field-control">
+                <label>
+                  뗄 때 감도
+                  <input id="rtReleaseRange" type="range" min="0.1" max="1.5" step="0.1" value="0.3">
+                </label>
+                <input id="rtReleaseNumber" class="number" type="number" min="0.1" max="1.5" step="0.1" value="0.3" aria-label="래피드 트리거 뗄 때 감도">
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="switch-zone">
+          <div id="switchWrap" class="switch-wrap" role="slider" tabindex="0" aria-label="스위치 입력 깊이" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0">
+            <div class="switch-core">
+              <div class="photo-switch" aria-hidden="true">
+                <div class="photo-shadow"></div>
+                <img class="photo-layer photo-housing" src="assets/switch-photo-housing.png" alt="" draggable="false">
+                <img class="photo-layer photo-stem" src="assets/switch-photo-stem.png" alt="" draggable="false">
+              </div>
+            </div>
+          </div>
+
+          <div class="scale" aria-hidden="true">
+            <div class="scale-track">
+              <div class="scale-fill"></div>
+            </div>
+            <div class="scale-marker"></div>
+            <div class="actuation-line"></div>
+            <div class="rt-scale-line press"></div>
+            <div class="rt-scale-line release"></div>
+            <div class="rt-scale-chip press" id="rtPressChip">ON +0.4mm</div>
+            <div class="rt-scale-chip release" id="rtReleaseChip">OFF -0.3mm</div>
+            <div class="scale-labels">
+              <span>0.0mm</span>
+              <span>4.0mm</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stage-controls">
+          <input id="depthSlider" class="depth-slider" type="range" min="0" max="4" step="0.1" value="0" aria-label="현재 입력 깊이">
+          <div class="button-row">
+            <button id="demoButton" class="btn primary" type="button">자동 데모</button>
+            <button id="resetButton" class="btn" type="button">리셋</button>
+          </div>
+        </div>
+      </article>
+
+    </section>
+  </main>
+
+  <script>
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const roundTenth = (value) => Math.round(value * 10) / 10;
+
+    const refs = {
+      root: document.documentElement,
+      mainStatus: document.getElementById("mainStatus"),
+      mainStatusText: document.getElementById("mainStatusText"),
+      mainStatusMode: document.getElementById("mainStatusMode"),
+      modeLabel: document.getElementById("modeLabel"),
+      modeSub: document.getElementById("modeSub"),
+      magneticTab: document.getElementById("magneticTab"),
+      rapidTab: document.getElementById("rapidTab"),
+      magneticSettingsPane: document.getElementById("magneticSettingsPane"),
+      rapidSettingsPane: document.getElementById("rapidSettingsPane"),
+      switchWrap: document.getElementById("switchWrap"),
+      depthValue: document.getElementById("depthValue"),
+      depthSlider: document.getElementById("depthSlider"),
+      actuationRange: document.getElementById("actuationRange"),
+      actuationNumber: document.getElementById("actuationNumber"),
+      rtPressRange: document.getElementById("rtPressRange"),
+      rtPressNumber: document.getElementById("rtPressNumber"),
+      rtReleaseRange: document.getElementById("rtReleaseRange"),
+      rtReleaseNumber: document.getElementById("rtReleaseNumber"),
+      rtPressChip: document.getElementById("rtPressChip"),
+      rtReleaseChip: document.getElementById("rtReleaseChip"),
+      rtDepth: document.getElementById("rtDepth"),
+      demoButton: document.getElementById("demoButton"),
+      resetButton: document.getElementById("resetButton")
+    };
+
+    const state = {
+      depth: 0,
+      activeTab: "magnetic",
+      actuation: 1.2,
+      rtEnabled: false,
+      rtPress: 0.4,
+      rtRelease: 0.3,
+      rtOn: false,
+      lastDepth: 0,
+      direction: "idle",
+      downAnchor: 0,
+      upAnchor: 0,
+      demoTimer: null
+    };
+
+    function formatMm(value) {
+      return roundTenth(value).toFixed(1);
+    }
+
+    function syncPair(rangeEl, numberEl, key, min, max) {
+      const value = clamp(roundTenth(Number(rangeEl.value || numberEl.value || 0)), min, max);
+      state[key] = value;
+      rangeEl.value = value.toFixed(1);
+      numberEl.value = value.toFixed(1);
+      if (key.startsWith("rt")) {
+        resetRapidAnchors();
+      }
+      render();
+    }
+
+    function selectTab(tabName) {
+      stopDemo();
+      state.activeTab = tabName;
+      state.rtEnabled = tabName === "rapid";
+      resetRapidAnchors();
+      render();
+    }
+
+    function resetRapidAnchors() {
+      state.rtOn = false;
+      state.lastDepth = state.depth;
+      state.direction = "idle";
+      state.downAnchor = state.depth;
+      state.upAnchor = state.depth;
+    }
+
+    function updateRapidTrigger(nextDepth) {
+      const delta = nextDepth - state.lastDepth;
+      const epsilon = 0.015;
+
+      if (Math.abs(delta) > epsilon) {
+        const nextDirection = delta > 0 ? "down" : "up";
+        if (nextDirection !== state.direction) {
+          state.direction = nextDirection;
+          if (nextDirection === "down") {
+            state.downAnchor = state.lastDepth;
+          } else {
+            state.upAnchor = state.lastDepth;
+          }
+        }
+
+        if (!state.rtOn && state.direction === "down") {
+          const triggerPoint = clamp(state.downAnchor + state.rtPress, 0, 4);
+          if (nextDepth >= triggerPoint) {
+            state.rtOn = true;
+            state.upAnchor = nextDepth;
+          }
+        }
+
+        if (state.rtOn && state.direction === "up") {
+          const releasePoint = clamp(state.upAnchor - state.rtRelease, 0, 4);
+          if (nextDepth <= releasePoint) {
+            state.rtOn = false;
+            state.downAnchor = nextDepth;
+          }
+        }
+      }
+
+      state.lastDepth = nextDepth;
+    }
+
+    function setDepth(value) {
+      const nextDepth = clamp(roundTenth(value), 0, 4);
+      updateRapidTrigger(nextDepth);
+      state.depth = nextDepth;
+      render();
+    }
+
+    function render() {
+      const press = state.depth / 4;
+      const staticOn = state.depth >= state.actuation;
+      const effectiveOn = state.rtEnabled ? state.rtOn : staticOn;
+      const actuationRatio = state.actuation / 4;
+      const rtPressRatio = clamp((state.direction === "down" ? state.downAnchor + state.rtPress : state.depth + state.rtPress) / 4, 0, 1);
+      const rtReleaseRatio = clamp((state.direction === "up" ? state.upAnchor - state.rtRelease : state.depth - state.rtRelease) / 4, 0, 1);
+
+      refs.root.style.setProperty("--press", press.toFixed(3));
+      refs.root.style.setProperty("--field", press.toFixed(3));
+      refs.root.style.setProperty("--actuation", actuationRatio.toFixed(3));
+      refs.root.style.setProperty("--rt-press", rtPressRatio.toFixed(3));
+      refs.root.style.setProperty("--rt-release", rtReleaseRatio.toFixed(3));
+      document.body.classList.toggle("mode-rapid", state.activeTab === "rapid");
+      document.body.classList.toggle("mode-magnetic", state.activeTab === "magnetic");
+      document.body.classList.toggle("input-on", effectiveOn);
+
+      refs.magneticTab.setAttribute("aria-selected", state.activeTab === "magnetic" ? "true" : "false");
+      refs.rapidTab.setAttribute("aria-selected", state.activeTab === "rapid" ? "true" : "false");
+      refs.magneticSettingsPane.hidden = state.activeTab !== "magnetic";
+      refs.rapidSettingsPane.hidden = state.activeTab !== "rapid";
+
+      refs.mainStatus.classList.toggle("is-on", effectiveOn);
+      refs.mainStatusText.textContent = effectiveOn ? "ON" : "OFF";
+      refs.mainStatusMode.textContent = state.rtEnabled ? "래피드 트리거 기준" : "작동 지점 기준";
+      refs.modeLabel.textContent = state.rtEnabled ? "Rapid Trigger" : "Normal Actuation";
+      refs.modeSub.textContent = state.rtEnabled ? "방향 변화량으로 즉시 ON/OFF" : "설정한 입력 지점을 넘으면 ON";
+
+      refs.depthValue.textContent = formatMm(state.depth);
+      refs.depthSlider.value = formatMm(state.depth);
+      refs.switchWrap.setAttribute("aria-valuenow", formatMm(state.depth));
+      refs.switchWrap.setAttribute("aria-valuetext", `${formatMm(state.depth)}mm`);
+
+      refs.actuationRange.value = formatMm(state.actuation);
+      refs.actuationNumber.value = formatMm(state.actuation);
+      refs.rtPressRange.value = formatMm(state.rtPress);
+      refs.rtPressNumber.value = formatMm(state.rtPress);
+      refs.rtReleaseRange.value = formatMm(state.rtRelease);
+      refs.rtReleaseNumber.value = formatMm(state.rtRelease);
+
+      refs.rtPressChip.textContent = `ON +${formatMm(state.rtPress)}mm`;
+      refs.rtReleaseChip.textContent = `OFF -${formatMm(state.rtRelease)}mm`;
+      refs.rtDepth.textContent = `${formatMm(state.depth)}mm`;
+    }
+
+    function depthFromPointer(clientY) {
+      const rect = refs.switchWrap.getBoundingClientRect();
+      const top = rect.top + rect.height * 0.24;
+      const bottom = rect.top + rect.height * 0.76;
+      return ((clamp(clientY, top, bottom) - top) / (bottom - top)) * 4;
+    }
+
+    function startDrag(event) {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      refs.switchWrap.setPointerCapture(event.pointerId);
+      setDepth(depthFromPointer(event.clientY));
+    }
+
+    function moveDrag(event) {
+      if (!refs.switchWrap.hasPointerCapture(event.pointerId)) return;
+      setDepth(depthFromPointer(event.clientY));
+    }
+
+    function stopDemo() {
+      if (state.demoTimer) {
+        clearInterval(state.demoTimer);
+        state.demoTimer = null;
+        refs.demoButton.textContent = "자동 데모";
+      }
+    }
+
+    refs.switchWrap.addEventListener("pointerdown", (event) => {
+      stopDemo();
+      startDrag(event);
+    });
+    refs.switchWrap.addEventListener("pointermove", moveDrag);
+    refs.switchWrap.addEventListener("pointerup", (event) => {
+      if (refs.switchWrap.hasPointerCapture(event.pointerId)) {
+        refs.switchWrap.releasePointerCapture(event.pointerId);
+      }
+    });
+    refs.switchWrap.addEventListener("pointercancel", (event) => {
+      if (refs.switchWrap.hasPointerCapture(event.pointerId)) {
+        refs.switchWrap.releasePointerCapture(event.pointerId);
+      }
+    });
+    refs.switchWrap.addEventListener("keydown", (event) => {
+      const step = event.shiftKey ? 0.5 : 0.1;
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+        event.preventDefault();
+        stopDemo();
+        setDepth(state.depth + step);
+      }
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        stopDemo();
+        setDepth(state.depth - step);
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        stopDemo();
+        setDepth(0);
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        stopDemo();
+        setDepth(4);
+      }
+    });
+
+    refs.depthSlider.addEventListener("input", () => {
+      stopDemo();
+      setDepth(Number(refs.depthSlider.value));
+    });
+
+    refs.magneticTab.addEventListener("click", () => selectTab("magnetic"));
+    refs.rapidTab.addEventListener("click", () => selectTab("rapid"));
+
+    refs.actuationRange.addEventListener("input", () => syncPair(refs.actuationRange, refs.actuationNumber, "actuation", 0.1, 4));
+    refs.actuationNumber.addEventListener("input", () => syncPair(refs.actuationRange, refs.actuationNumber, "actuation", 0.1, 4));
+    refs.rtPressRange.addEventListener("input", () => syncPair(refs.rtPressRange, refs.rtPressNumber, "rtPress", 0.1, 1.5));
+    refs.rtPressNumber.addEventListener("input", () => syncPair(refs.rtPressRange, refs.rtPressNumber, "rtPress", 0.1, 1.5));
+    refs.rtReleaseRange.addEventListener("input", () => syncPair(refs.rtReleaseRange, refs.rtReleaseNumber, "rtRelease", 0.1, 1.5));
+    refs.rtReleaseNumber.addEventListener("input", () => syncPair(refs.rtReleaseRange, refs.rtReleaseNumber, "rtRelease", 0.1, 1.5));
+
+    refs.resetButton.addEventListener("click", () => {
+      stopDemo();
+      state.depth = 0;
+      resetRapidAnchors();
+      render();
+    });
+
+    refs.demoButton.addEventListener("click", () => {
+      if (state.demoTimer) {
+        stopDemo();
+        return;
+      }
+
+      let t = 0;
+      refs.demoButton.textContent = "정지";
+      state.demoTimer = setInterval(() => {
+        t += 0.08;
+        const wave = (Math.sin(t) + 1) / 2;
+        setDepth(wave * 4);
+      }, 40);
+    });
+
+    resetRapidAnchors();
+    render();
+  </script>
+</body>
+</html>
