@@ -23,7 +23,6 @@
       --field: 0;
       --rt-press: 0.1;
       --rt-release: 0;
-      --runner-shift: 0%;
       --runner-frame-x: 0%;
       --game-bg-x: 0px;
       color-scheme: light;
@@ -264,7 +263,7 @@
 
     .runner {
       position: absolute;
-      left: calc(12% + var(--runner-shift));
+      left: 12%;
       bottom: 14px;
       height: min(150px, 78%);
       aspect-ratio: 543 / 724;
@@ -277,17 +276,18 @@
       transform-origin: 50% 100%;
       filter: drop-shadow(0 8px 10px rgba(19, 35, 44, 0.2));
       z-index: 2;
-      transition: left 120ms linear, transform 120ms ease;
+      transform: translateY(0);
+      transition: transform 120ms ease;
       will-change: background-position, transform;
     }
 
     .is-running .runner {
-      animation: runner-bob 360ms steps(2, end) infinite;
+      animation: runner-bob 520ms ease-in-out infinite;
     }
 
     .runner-shadow {
       position: absolute;
-      left: calc(12% + var(--runner-shift));
+      left: 12%;
       bottom: 14px;
       width: 76px;
       height: 12px;
@@ -296,21 +296,21 @@
       filter: blur(4px);
       transform: translateX(18px);
       z-index: 1;
-      transition: left 120ms linear, transform 120ms ease;
+      transition: transform 120ms ease;
     }
 
     .is-running .runner-shadow {
-      animation: shadow-step 420ms steps(2, end) infinite;
+      animation: shadow-step 520ms ease-in-out infinite;
     }
 
     @keyframes runner-bob {
       0%,
       100% {
-        transform: translateY(0) rotate(-0.8deg);
+        transform: translateY(0);
       }
 
       50% {
-        transform: translateY(-5px) rotate(1deg);
+        transform: translateY(-2px);
       }
     }
 
@@ -318,10 +318,12 @@
       0%,
       100% {
         transform: translateX(18px) scaleX(1);
+        opacity: 1;
       }
 
       50% {
-        transform: translateX(18px) scaleX(0.86);
+        transform: translateX(18px) scaleX(0.94);
+        opacity: 0.88;
       }
     }
 
@@ -914,11 +916,11 @@
       .runner {
         height: 122px;
         max-width: 42%;
-        left: calc(8% + var(--runner-shift));
+        left: 8%;
       }
 
       .runner-shadow {
-        left: calc(8% + var(--runner-shift));
+        left: 8%;
       }
 
       .switch-zone {
@@ -1297,7 +1299,6 @@
       refs.root.style.setProperty("--actuation", actuationRatio.toFixed(3));
       refs.root.style.setProperty("--rt-press", rtPressRatio.toFixed(3));
       refs.root.style.setProperty("--rt-release", rtReleaseRatio.toFixed(3));
-      refs.root.style.setProperty("--runner-shift", `${(press * 18).toFixed(1)}%`);
       document.body.classList.toggle("mode-rapid", state.activeTab === "rapid");
       document.body.classList.toggle("mode-magnetic", state.activeTab === "magnetic");
       document.body.classList.toggle("input-on", effectiveOn);
@@ -1354,7 +1355,7 @@
         state.gameScroll = (state.gameScroll + (delta * speed) / 1000) % tileWidth;
         refs.root.style.setProperty("--game-bg-x", `${(-state.gameScroll).toFixed(1)}px`);
 
-        const frameStep = 115 - Math.min(state.depth * 7, 28);
+        const frameStep = 150 - Math.min(state.depth * 6, 24);
         if (timestamp - state.lastFrameTime >= frameStep) {
           setRunnerFrame(state.runnerFrame + 1);
           state.lastFrameTime = timestamp;
