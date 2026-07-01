@@ -24,6 +24,8 @@
       --rt-press: 0.1;
       --rt-release: 0;
       --runner-shift: 0%;
+      --runner-frame-x: 0%;
+      --game-bg-x: 0px;
       color-scheme: light;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -251,37 +253,36 @@
     .game-bg {
       position: absolute;
       inset: 0;
-      width: 200%;
       background-image: url("assets/side-scroll-bg.png");
       background-size: auto 100%;
       background-repeat: repeat-x;
+      background-position: var(--game-bg-x) 0;
       image-rendering: pixelated;
-      transform: translateX(0);
-      animation: game-scroll calc(3.8s - var(--press) * 1.7s) linear infinite;
-      animation-play-state: paused;
+      will-change: background-position;
       z-index: 0;
-    }
-
-    .is-pressing .game-bg {
-      animation-play-state: running;
     }
 
     .runner {
       position: absolute;
       left: calc(12% + var(--runner-shift));
-      bottom: 17px;
+      bottom: 14px;
       height: min(150px, 78%);
+      aspect-ratio: 543 / 724;
       max-width: 34%;
-      object-fit: contain;
+      background-image: url("assets/character-walk-sheet.png");
+      background-size: 400% 100%;
+      background-position: var(--runner-frame-x) 0;
+      background-repeat: no-repeat;
       image-rendering: pixelated;
       transform-origin: 50% 100%;
       filter: drop-shadow(0 8px 10px rgba(19, 35, 44, 0.2));
       z-index: 2;
-      transition: left 120ms linear;
+      transition: left 120ms linear, transform 120ms ease;
+      will-change: background-position, transform;
     }
 
-    .is-pressing .runner {
-      animation: runner-step 420ms steps(2, end) infinite;
+    .is-running .runner {
+      animation: runner-bob 360ms steps(2, end) infinite;
     }
 
     .runner-shadow {
@@ -298,53 +299,11 @@
       transition: left 120ms linear, transform 120ms ease;
     }
 
-    .is-pressing .runner-shadow {
+    .is-running .runner-shadow {
       animation: shadow-step 420ms steps(2, end) infinite;
     }
 
-    .game-status {
-      position: absolute;
-      right: 14px;
-      top: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 7px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.72);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.7);
-      color: #48616c;
-      font-size: 12px;
-      font-weight: 900;
-      box-shadow: 0 8px 18px rgba(19, 35, 44, 0.08);
-      z-index: 3;
-    }
-
-    .game-status::before {
-      content: "";
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--red);
-      box-shadow: 0 0 0 3px rgba(242, 107, 100, 0.12);
-    }
-
-    .is-pressing .game-status {
-      color: #13542f;
-    }
-
-    .is-pressing .game-status::before {
-      background: var(--green);
-      box-shadow: 0 0 0 3px rgba(36, 201, 107, 0.14), 0 0 12px rgba(36, 201, 107, 0.42);
-    }
-
-    @keyframes game-scroll {
-      to {
-        transform: translateX(-50%);
-      }
-    }
-
-    @keyframes runner-step {
+    @keyframes runner-bob {
       0%,
       100% {
         transform: translateY(0) rotate(-0.8deg);
@@ -1115,8 +1074,7 @@
         <div class="game-panel" aria-label="mini walking game">
           <div class="game-bg" aria-hidden="true"></div>
           <div class="runner-shadow" aria-hidden="true"></div>
-          <img class="runner" src="assets/character-walker.png" alt="" draggable="false">
-          <div id="gameStatus" class="game-status" aria-live="polite">WAIT</div>
+          <div class="runner" role="img" aria-label="걷는 캐릭터"></div>
         </div>
 
         <div class="switch-zone">
@@ -1217,9 +1175,9 @@
       rapidTab: document.getElementById("rapidTab"),
       magneticSettingsPane: document.getElementById("magneticSettingsPane"),
       rapidSettingsPane: document.getElementById("rapidSettingsPane"),
+      gamePanel: document.querySelector(".game-panel"),
       switchWrap: document.getElementById("switchWrap"),
       depthValue: document.getElementById("depthValue"),
-      gameStatus: document.getElementById("gameStatus"),
       actuationRange: document.getElementById("actuationRange"),
       actuationNumber: document.getElementById("actuationNumber"),
       rtPressRange: document.getElementById("rtPressRange"),
@@ -1245,6 +1203,11 @@
       direction: "idle",
       downAnchor: 0,
       upAnchor: 0,
+      gameRunning: false,
+      gameScroll: 0,
+      runnerFrame: 0,
+      lastAnimationTime: null,
+      lastFrameTime: 0,
       demoTimer: null
     };
 
@@ -1338,7 +1301,11 @@
       document.body.classList.toggle("mode-rapid", state.activeTab === "rapid");
       document.body.classList.toggle("mode-magnetic", state.activeTab === "magnetic");
       document.body.classList.toggle("input-on", effectiveOn);
-      document.body.classList.toggle("is-pressing", state.depth > 0.05);
+      document.body.classList.toggle("is-running", effectiveOn);
+      state.gameRunning = effectiveOn;
+      if (!effectiveOn) {
+        setRunnerFrame(0);
+      }
 
       refs.magneticTab.setAttribute("aria-selected", state.activeTab === "magnetic" ? "true" : "false");
       refs.rapidTab.setAttribute("aria-selected", state.activeTab === "rapid" ? "true" : "false");
@@ -1352,7 +1319,6 @@
       refs.modeSub.textContent = state.rtEnabled ? "방향 변화량으로 즉시 ON/OFF" : "설정한 입력 지점을 넘으면 ON";
 
       refs.depthValue.textContent = formatMm(state.depth);
-      refs.gameStatus.textContent = state.depth > 0.05 ? "WALK" : "WAIT";
       refs.switchWrap.setAttribute("aria-valuenow", formatMm(state.depth));
       refs.switchWrap.setAttribute("aria-valuetext", `${formatMm(state.depth)}mm`);
 
@@ -1366,6 +1332,39 @@
       refs.rtPressChip.textContent = `ON +${formatMm(state.rtPress)}mm`;
       refs.rtReleaseChip.textContent = `OFF -${formatMm(state.rtRelease)}mm`;
       refs.rtDepth.textContent = `${formatMm(state.depth)}mm`;
+    }
+
+    function setRunnerFrame(frame) {
+      state.runnerFrame = frame % 4;
+      refs.root.style.setProperty("--runner-frame-x", `${((state.runnerFrame / 3) * 100).toFixed(3)}%`);
+    }
+
+    function animateGame(timestamp) {
+      if (state.lastAnimationTime === null) {
+        state.lastAnimationTime = timestamp;
+      }
+
+      const delta = Math.min(timestamp - state.lastAnimationTime, 48);
+      state.lastAnimationTime = timestamp;
+
+      if (state.gameRunning) {
+        const panelHeight = Math.max(refs.gamePanel.clientHeight, 1);
+        const tileWidth = panelHeight * (1774 / 887);
+        const speed = 92 + (state.depth / 4) * 78;
+        state.gameScroll = (state.gameScroll + (delta * speed) / 1000) % tileWidth;
+        refs.root.style.setProperty("--game-bg-x", `${(-state.gameScroll).toFixed(1)}px`);
+
+        const frameStep = 115 - Math.min(state.depth * 7, 28);
+        if (timestamp - state.lastFrameTime >= frameStep) {
+          setRunnerFrame(state.runnerFrame + 1);
+          state.lastFrameTime = timestamp;
+        }
+      } else if (state.runnerFrame !== 0) {
+        setRunnerFrame(0);
+        state.lastFrameTime = timestamp;
+      }
+
+      requestAnimationFrame(animateGame);
     }
 
     function depthFromPointer(clientY) {
@@ -1467,6 +1466,7 @@
 
     resetRapidAnchors();
     render();
+    requestAnimationFrame(animateGame);
   </script>
 </body>
 </html>

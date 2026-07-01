@@ -6,6 +6,6 @@ Interactive static demo for explaining a Hall Effect magnetic keyboard switch.
 - Adjust magnetic actuation point.
 - Switch between normal actuation and rapid trigger settings.
 - The switch body uses raster layers exported from a Photoshop PSD: fixed housing plus moving orange stem.
-- A small side-scrolling runner scene reacts while the switch is pressed.
+- A small side-scrolling runner scene uses a 4-frame sprite and reacts to the effective switch ON state.
 
 GitHub Pages entry point: `index.html`
