@@ -21,6 +21,12 @@
       --navy: #0d3d73;
       --press: 0;
       --field: 0;
+      --field-opacity: 0.18;
+      --field-core-alpha: 0.12;
+      --field-green-alpha: 0.1;
+      --field-ring-alpha: 0.22;
+      --field-side-alpha: 0.08;
+      --field-sensor-alpha: 0.24;
       --rt-press: 0.1;
       --rt-release: 0;
       --runner-frame-x: 0%;
@@ -305,6 +311,104 @@
       background: radial-gradient(ellipse, rgba(19, 35, 44, 0.16), rgba(19, 35, 44, 0));
       filter: blur(9px);
       z-index: 0;
+    }
+
+    .magnetic-field {
+      position: absolute;
+      left: 50%;
+      bottom: 19%;
+      width: 178px;
+      height: 110px;
+      transform: translateX(-50%) scale(calc(0.82 + var(--field) * 0.18));
+      transform-origin: 50% 100%;
+      opacity: var(--field-opacity);
+      filter: drop-shadow(0 0 calc(4px + var(--field) * 14px) rgba(26, 183, 194, 0.48));
+      pointer-events: none;
+      transition: opacity 90ms linear, transform 90ms linear, filter 90ms linear;
+      z-index: 3;
+    }
+
+    .magnetic-field::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 4px;
+      width: calc(20px + var(--field) * 28px);
+      height: 92px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(103, 220, 226, 0), rgba(103, 220, 226, var(--field-core-alpha)), rgba(36, 201, 107, var(--field-green-alpha)));
+      transform: translateX(-50%);
+      filter: blur(calc(6px + var(--field) * 7px));
+    }
+
+    .field-ring {
+      position: absolute;
+      left: 50%;
+      bottom: calc(var(--ring-index) * 15px);
+      width: calc(54px + var(--ring-index) * 18px + var(--field) * 20px);
+      height: calc(13px + var(--ring-index) * 4px);
+      border: 2px solid rgba(24, 174, 186, var(--field-ring-alpha));
+      border-top-color: transparent;
+      border-left-color: rgba(24, 174, 186, var(--field-side-alpha));
+      border-right-color: rgba(24, 174, 186, var(--field-side-alpha));
+      border-radius: 0 0 999px 999px;
+      transform: translateX(-50%);
+      box-shadow: 0 calc(var(--field) * 2px) calc(5px + var(--field) * 10px) rgba(24, 174, 186, 0.2);
+    }
+
+    .field-ring:nth-child(1) {
+      --ring-index: 0;
+    }
+
+    .field-ring:nth-child(2) {
+      --ring-index: 1;
+    }
+
+    .field-ring:nth-child(3) {
+      --ring-index: 2;
+    }
+
+    .field-ring:nth-child(4) {
+      --ring-index: 3;
+    }
+
+    .hall-sensor {
+      position: absolute;
+      left: 50%;
+      bottom: 9%;
+      width: 72px;
+      height: 22px;
+      border-radius: 6px;
+      border: 1px solid rgba(19, 35, 44, 0.5);
+      background: linear-gradient(180deg, #263642, #10181e);
+      transform: translateX(-50%);
+      box-shadow:
+        0 7px 12px rgba(19, 35, 44, 0.24),
+        0 0 calc(var(--field) * 24px) rgba(36, 201, 107, 0.5);
+      transition: box-shadow 90ms linear;
+      z-index: 4;
+    }
+
+    .hall-sensor::before {
+      content: "";
+      position: absolute;
+      inset: 5px 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(103, 220, 226, 0.2), rgba(36, 201, 107, var(--field-sensor-alpha)));
+      box-shadow: 0 0 calc(4px + var(--field) * 14px) rgba(36, 201, 107, 0.52);
+    }
+
+    .hall-sensor::after {
+      content: "Hall IC";
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 6px);
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0;
+      white-space: nowrap;
     }
 
     .photo-layer {
@@ -971,6 +1075,13 @@
             <div class="switch-core">
               <div class="photo-switch" aria-hidden="true">
                 <div class="photo-shadow"></div>
+                <div class="magnetic-field">
+                  <span class="field-ring"></span>
+                  <span class="field-ring"></span>
+                  <span class="field-ring"></span>
+                  <span class="field-ring"></span>
+                </div>
+                <div class="hall-sensor"></div>
                 <img class="photo-layer photo-housing" src="assets/switch-photo-housing.png" alt="" draggable="false">
                 <img class="photo-layer photo-stem" src="assets/switch-photo-stem.png" alt="" draggable="false">
               </div>
@@ -1179,6 +1290,12 @@
 
       refs.root.style.setProperty("--press", press.toFixed(3));
       refs.root.style.setProperty("--field", press.toFixed(3));
+      refs.root.style.setProperty("--field-opacity", (0.18 + press * 0.82).toFixed(3));
+      refs.root.style.setProperty("--field-core-alpha", (0.12 + press * 0.34).toFixed(3));
+      refs.root.style.setProperty("--field-green-alpha", (0.1 + press * 0.46).toFixed(3));
+      refs.root.style.setProperty("--field-ring-alpha", (0.22 + press * 0.58).toFixed(3));
+      refs.root.style.setProperty("--field-side-alpha", (0.08 + press * 0.28).toFixed(3));
+      refs.root.style.setProperty("--field-sensor-alpha", (0.24 + press * 0.76).toFixed(3));
       refs.root.style.setProperty("--actuation", actuationRatio.toFixed(3));
       refs.root.style.setProperty("--rt-press", rtPressRatio.toFixed(3));
       refs.root.style.setProperty("--rt-release", rtReleaseRatio.toFixed(3));
