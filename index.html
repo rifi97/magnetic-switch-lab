@@ -1210,7 +1210,8 @@
       runnerFrame: 0,
       lastAnimationTime: null,
       lastFrameTime: 0,
-      demoTimer: null
+      demoTimer: null,
+      returnAnimation: null
     };
 
     function formatMm(value) {
@@ -1377,6 +1378,7 @@
 
     function startDrag(event) {
       if (event.pointerType === "mouse" && event.button !== 0) return;
+      stopReturn();
       refs.switchWrap.setPointerCapture(event.pointerId);
       setDepth(depthFromPointer(event.clientY));
     }
@@ -1394,41 +1396,82 @@
       }
     }
 
+    function stopReturn() {
+      if (state.returnAnimation !== null) {
+        cancelAnimationFrame(state.returnAnimation);
+        state.returnAnimation = null;
+      }
+    }
+
+    function returnToZero() {
+      stopReturn();
+      const startDepth = state.depth;
+      if (startDepth <= 0) {
+        setDepth(0);
+        resetRapidAnchors();
+        return;
+      }
+
+      const startedAt = performance.now();
+      const duration = 230;
+
+      function tick(timestamp) {
+        const progress = clamp((timestamp - startedAt) / duration, 0, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setDepth(startDepth * (1 - eased));
+
+        if (progress < 1) {
+          state.returnAnimation = requestAnimationFrame(tick);
+          return;
+        }
+
+        state.returnAnimation = null;
+        setDepth(0);
+        resetRapidAnchors();
+      }
+
+      state.returnAnimation = requestAnimationFrame(tick);
+    }
+
+    function finishDrag(event) {
+      const hadCapture = refs.switchWrap.hasPointerCapture(event.pointerId);
+      if (hadCapture) {
+        refs.switchWrap.releasePointerCapture(event.pointerId);
+        returnToZero();
+      }
+    }
+
     refs.switchWrap.addEventListener("pointerdown", (event) => {
       stopDemo();
       startDrag(event);
     });
     refs.switchWrap.addEventListener("pointermove", moveDrag);
-    refs.switchWrap.addEventListener("pointerup", (event) => {
-      if (refs.switchWrap.hasPointerCapture(event.pointerId)) {
-        refs.switchWrap.releasePointerCapture(event.pointerId);
-      }
-    });
-    refs.switchWrap.addEventListener("pointercancel", (event) => {
-      if (refs.switchWrap.hasPointerCapture(event.pointerId)) {
-        refs.switchWrap.releasePointerCapture(event.pointerId);
-      }
-    });
+    refs.switchWrap.addEventListener("pointerup", finishDrag);
+    refs.switchWrap.addEventListener("pointercancel", finishDrag);
     refs.switchWrap.addEventListener("keydown", (event) => {
       const step = event.shiftKey ? 0.5 : 0.1;
       if (event.key === "ArrowDown" || event.key === "ArrowRight") {
         event.preventDefault();
         stopDemo();
+        stopReturn();
         setDepth(state.depth + step);
       }
       if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         event.preventDefault();
         stopDemo();
+        stopReturn();
         setDepth(state.depth - step);
       }
       if (event.key === "Home") {
         event.preventDefault();
         stopDemo();
+        stopReturn();
         setDepth(0);
       }
       if (event.key === "End") {
         event.preventDefault();
         stopDemo();
+        stopReturn();
         setDepth(4);
       }
     });
@@ -1445,6 +1488,7 @@
 
     refs.resetButton.addEventListener("click", () => {
       stopDemo();
+      stopReturn();
       state.depth = 0;
       resetRapidAnchors();
       render();
@@ -1456,6 +1500,7 @@
         return;
       }
 
+      stopReturn();
       let t = 0;
       refs.demoButton.textContent = "정지";
       state.demoTimer = setInterval(() => {
